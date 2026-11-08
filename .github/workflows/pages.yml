@@ -22,7 +22,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - name: Verify and unpack compiled browser files
         env:
-          EXPECTED_SHA256: 0751f25c0e53768f54869266316641a3a958a66172c703a96fe3ad6bb4dd177a
+          EXPECTED_SHA256: ef75e6cc9f7314ead4db93dde4b2c7c0d39270060397221cba8116d56e8b2837
         run: |
           python3 - <<'PY'
           import base64, hashlib, io, os, zipfile
