@@ -1,0 +1,45 @@
+name: Deploy RotaGlance web
+on:
+  push:
+    branches: [main]
+    paths: ['.deploy/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      - name: Verify and unpack compiled browser files
+        env:
+          EXPECTED_SHA256: ebd892074b672134e3319400f71410716ecec36dee147464926a5bd785735ba9
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, os, zipfile
+          from pathlib import Path
+          encoded = ''.join(p.read_text().strip() for p in sorted(Path('.deploy').glob('site-*.b64')))
+          data = base64.b64decode(encoded, validate=True)
+          assert hashlib.sha256(data).hexdigest() == os.environ['EXPECTED_SHA256'], 'Bundle integrity check failed'
+          target = Path('_site').resolve()
+          with zipfile.ZipFile(io.BytesIO(data)) as archive:
+              for name in archive.namelist():
+                  assert (target / name).resolve().is_relative_to(target), 'Unsafe archive path'
+              archive.extractall(target)
+          assert (target / 'index.html').is_file(), 'Missing app entry'
+          PY
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Deploy public application
+        id: deployment
+        uses: actions/deploy-pages@v4
